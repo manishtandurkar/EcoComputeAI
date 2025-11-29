@@ -9,7 +9,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional
 
-# Try to import pynvml, set flag if unavailable
+# Try to import nvidia-ml-py (imported as pynvml), set flag if unavailable
 try:
     import pynvml
     NVML_AVAILABLE = True
