@@ -1,0 +1,14 @@
+# EcoCompute AI / GreenGL - Dependencies
+# GPU Carbon Emissions Monitor
+
+# Core Flask web framework
+flask>=2.3.0
+
+# HTTP requests for carbon intensity API
+requests>=2.31.0
+
+# NVIDIA GPU monitoring (optional - will fall back to simulation if unavailable)
+pynvml>=11.5.0
+
+# CORS support for API access
+flask-cors>=4.0.0

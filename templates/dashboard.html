@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 EcoCompute AI - GPU Carbon Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #1a1f3a;
+            --bg-card: rgba(26, 31, 58, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: #b8c5d6;
+            --accent-green: #00ff88;
+            --accent-blue: #00d4ff;
+            --accent-red: #ff4757;
+            --accent-yellow: #ffa502;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --glow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #ffffff;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --text-primary: #1a1f3a;
+            --text-secondary: #4a5568;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --glow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+            background: 
+                radial-gradient(circle at 20% 50%, var(--accent-green) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, var(--accent-blue) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, var(--accent-yellow) 0%, transparent 50%);
+            animation: bgFloat 15s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        /* Header */
+        .header {
+            backdrop-filter: blur(20px);
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--accent-red), #ff6b81);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 0.4rem;
+            cursor: pointer;
+            font-size: 1.2rem;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(180deg);
+        }
+
+        .region-selector {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        /* Glass card */
+        .card {
+            backdrop-filter: blur(20px);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+        }
+
+        /* Grid layouts */
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        /* Metrics */
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-green);
+        }
+
+        .metric-value.warning {
+            color: var(--accent-yellow);
+        }
+
+        .metric-value.danger {
+            color: var(--accent-red);
+        }
+
+        /* Status badge */
+        .status-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .status-running {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--accent-green);
+            box-shadow: var(--glow);
+        }
+
+        .status-idle {
+            background: rgba(184, 197, 214, 0.2);
+            color: var(--text-secondary);
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -100%; }
+            100% { background-position: 200%; }
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        /* CO2 Equivalents */
+        .equivalents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .equivalent-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .equivalent-item:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-green);
+        }
+
+        .equivalent-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .equivalent-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--accent-green);
+        }
+
+        .equivalent-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+        }
+
+        /* Session history */
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            margin-bottom: 0.8rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            border-color: var(--accent-green);
+            transform: translateX(5px);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .history-date {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .history-duration {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .history-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            animation: slideInRight 0.3s ease;
+            max-width: 350px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.warning {
+            border-left: 4px solid var(--accent-yellow);
+        }
+
+        .notification.danger {
+            border-left: 4px solid var(--accent-red);
+        }
+
+        .notification-close {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .btn {
+                flex: 1;
+                min-width: 0;
+                padding: 0.5rem 0.8rem;
+                font-size: 0.85rem;
+            }
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+
+            .equivalents-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-green);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🌱</span>
+                <span>EcoCompute AI</span>
+            </div>
+            <div class="controls">
+                <select id="regionSelector" class="region-selector">
+                    <option value="auto">🌍 Auto-detect</option>
+                    <option value="US">🇺🇸 United States</option>
+                    <option value="GB">🇬🇧 United Kingdom</option>
+                    <option value="DE">🇩🇪 Germany</option>
+                    <option value="FR">🇫🇷 France</option>
+                    <option value="JP">🇯🇵 Japan</option>
+                    <option value="CN">🇨🇳 China</option>
+                    <option value="IN">🇮🇳 India</option>
+                    <option value="AU">🇦🇺 Australia</option>
+                </select>
+                <button id="startJobBtn" class="btn btn-primary">▶️ Start Job</button>
+                <button id="stopJobBtn" class="btn btn-danger" style="display:none;">⏹️ Stop Job</button>
+                <button id="exportBtn" class="btn btn-secondary">📥 Export CSV</button>
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Status Overview -->
+        <div class="grid grid-4">
+            <div class="card">
+                <div class="metric">
+                    <span class="metric-label">⚡ Power Draw</span>
+                    <span class="metric-value" id="powerValue">--</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="metric">
+                    <span class="metric-label">🌡️ Temperature</span>
+                    <span class="metric-value" id="tempValue">--</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="metric">
+                    <span class="metric-label">🎯 Utilization</span>
+                    <span class="metric-value" id="utilizationValue">--</span>
+                </div>
+            </div>
+            <div class="card">
+                <div class="metric">
+                    <span class="metric-label">⏱️ Runtime</span>
+                    <span class="metric-value" id="runtimeValue">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- GPU Details -->
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">🖥️</span>
+                    <span>GPU Information</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Device</span>
+                    <span id="gpuName">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Status</span>
+                    <span id="jobStatus" class="status-badge status-idle">Idle</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Memory Usage</span>
+                    <span id="memoryUsage">--</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="memoryProgress" class="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">🌍</span>
+                    <span>Carbon Intensity</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Region</span>
+                    <span id="carbonRegion">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Intensity</span>
+                    <span class="metric-value" id="carbonIntensity">--</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Total Emissions</span>
+                    <span class="metric-value" id="totalEmissions">--</span>
+                </div>
+                <div id="suggestion" style="margin-top: 1rem; padding: 0.8rem; background: var(--bg-secondary); border-radius: 8px; font-size: 0.9rem;"></div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">📊</span>
+                    <span>Power & Utilization History</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="powerChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">🌿</span>
+                    <span>Emissions History</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="emissionsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- CO2 Equivalents -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">🌳</span>
+                <span>CO₂ Equivalents</span>
+            </div>
+            <div class="equivalents-grid">
+                <div class="equivalent-item">
+                    <div class="equivalent-icon">🌳</div>
+                    <div class="equivalent-value" id="treesNeeded">--</div>
+                    <div class="equivalent-label">Trees Needed/Year</div>
+                </div>
+                <div class="equivalent-item">
+                    <div class="equivalent-icon">🚗</div>
+                    <div class="equivalent-value" id="drivingMiles">--</div>
+                    <div class="equivalent-label">Miles Driven</div>
+                </div>
+                <div class="equivalent-item">
+                    <div class="equivalent-icon">💡</div>
+                    <div class="equivalent-value" id="lightbulbHours">--</div>
+                    <div class="equivalent-label">LED Hours</div>
+                </div>
+                <div class="equivalent-item">
+                    <div class="equivalent-icon">📱</div>
+                    <div class="equivalent-value" id="phoneCharges">--</div>
+                    <div class="equivalent-label">Phone Charges</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session History -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-icon">📜</span>
+                <span>Session History</span>
+                <button id="clearHistoryBtn" class="btn btn-secondary" style="margin-left: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;">Clear</button>
+            </div>
+            <div id="historyList" class="history-list">
+                <p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No sessions yet. Start a job to begin tracking!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            updateInterval: 1000,
+            chartMaxPoints: 30,
+            highCarbonThreshold: 400,
+            criticalCarbonThreshold: 600,
+            alertCooldown: 30000,
+            soundEnabled: true
+        };
+
+        // State
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        let selectedRegion = localStorage.getItem('region') || 'auto';
+        let charts = {};
+        let lastAlertTime = 0;
+        let sessionData = [];
+        let currentSession = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            applyTheme(currentTheme);
+            setupEventListeners();
+            initializeCharts();
+            loadSessionHistory();
+            startMetricsUpdate();
+            requestNotificationPermission();
+        }
+
+        // Theme Management
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            document.getElementById('themeToggle').textContent = theme === 'dark' ? '🌙' : '☀️';
+            currentTheme = theme;
+            localStorage.setItem('theme', theme);
+        }
+
+        function toggleTheme() {
+            applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+            updateChartThemes();
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            document.getElementById('startJobBtn').addEventListener('click', startJob);
+            document.getElementById('stopJobBtn').addEventListener('click', stopJob);
+            document.getElementById('exportBtn').addEventListener('click', exportToCSV);
+            document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
+            document.getElementById('regionSelector').addEventListener('change', updateRegion);
+            document.getElementById('regionSelector').value = selectedRegion;
+        }
+
+        // Region Management
+        function updateRegion() {
+            selectedRegion = document.getElementById('regionSelector').value;
+            localStorage.setItem('region', selectedRegion);
+            // In a real implementation, this would trigger a backend call to update the region
+            showNotification('Region updated to ' + selectedRegion, 'info');
+        }
+
+        // Chart Initialization
+        function initializeCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutQuart'
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary')
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--border-color')
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary')
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--border-color')
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary')
+                        }
+                    }
+                }
+            };
+
+            // Power & Utilization Chart
+            charts.power = new Chart(document.getElementById('powerChart'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Power (W)',
+                            data: [],
+                            borderColor: '#00ff88',
+                            backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Utilization (%)',
+                            data: [],
+                            borderColor: '#00d4ff',
+                            backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: chartOptions
+            });
+
+            // Emissions Chart
+            charts.emissions = new Chart(document.getElementById('emissionsChart'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Total Emissions (g CO₂)',
+                        data: [],
+                        borderColor: '#ffa502',
+                        backgroundColor: 'rgba(255, 165, 2, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: chartOptions
+            });
+        }
+
+        function updateChartThemes() {
+            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary');
+            const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color');
+            const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary');
+
+            Object.values(charts).forEach(chart => {
+                chart.options.plugins.legend.labels.color = textColor;
+                chart.options.scales.x.grid.color = gridColor;
+                chart.options.scales.x.ticks.color = secondaryColor;
+                chart.options.scales.y.grid.color = gridColor;
+                chart.options.scales.y.ticks.color = secondaryColor;
+                chart.update();
+            });
+        }
+
+        function updateChart(chart, label, data) {
+            if (chart.data.labels.length > CONFIG.chartMaxPoints) {
+                chart.data.labels.shift();
+                chart.data.datasets.forEach(dataset => dataset.data.shift());
+            }
+            chart.data.labels.push(label);
+            data.forEach((value, index) => {
+                chart.data.datasets[index].data.push(value);
+            });
+            chart.update('none');
+        }
+
+        // Metrics Update
+        function startMetricsUpdate() {
+            updateMetrics();
+            setInterval(updateMetrics, CONFIG.updateInterval);
+        }
+
+        async function updateMetrics() {
+            try {
+                const response = await fetch('/metrics');
+                const data = await response.json();
+
+                // Update GPU metrics
+                document.getElementById('powerValue').textContent = data.gpu.power_watts.toFixed(1) + ' W';
+                document.getElementById('tempValue').textContent = data.gpu.temperature_celsius.toFixed(1) + ' °C';
+                document.getElementById('utilizationValue').textContent = data.gpu.utilization_percent.toFixed(1) + '%';
+                document.getElementById('gpuName').textContent = data.gpu.name;
+                
+                // Update memory
+                const memPercent = data.gpu.memory_percent;
+                document.getElementById('memoryUsage').textContent = 
+                    `${data.gpu.memory_used_mb.toFixed(0)} / ${data.gpu.memory_total_mb.toFixed(0)} MB (${memPercent.toFixed(1)}%)`;
+                document.getElementById('memoryProgress').style.width = memPercent + '%';
+
+                // Update job status
+                const jobRunning = data.job.running;
+                document.getElementById('jobStatus').textContent = jobRunning ? 'Running' : 'Idle';
+                document.getElementById('jobStatus').className = jobRunning ? 'status-badge status-running' : 'status-badge status-idle';
+                document.getElementById('runtimeValue').textContent = formatTime(data.job.runtime_seconds);
+
+                // Update carbon metrics
+                document.getElementById('carbonRegion').textContent = data.carbon.region;
+                document.getElementById('carbonIntensity').textContent = 
+                    data.carbon.intensity_g_per_kwh.toFixed(0) + ' gCO₂/kWh';
+                document.getElementById('totalEmissions').textContent = 
+                    data.carbon.emissions_total_g.toFixed(2) + ' g';
+                document.getElementById('suggestion').textContent = '💡 ' + data.carbon.suggestion;
+
+                // Color code carbon intensity
+                const intensityElement = document.getElementById('carbonIntensity');
+                if (data.carbon.intensity_g_per_kwh > CONFIG.criticalCarbonThreshold) {
+                    intensityElement.classList.add('danger');
+                    intensityElement.classList.remove('warning');
+                } else if (data.carbon.intensity_g_per_kwh > CONFIG.highCarbonThreshold) {
+                    intensityElement.classList.add('warning');
+                    intensityElement.classList.remove('danger');
+                } else {
+                    intensityElement.classList.remove('warning', 'danger');
+                }
+
+                // Update CO2 equivalents
+                updateCO2Equivalents(data.carbon.emissions_total_g);
+
+                // Update charts
+                const timestamp = new Date().toLocaleTimeString();
+                updateChart(charts.power, timestamp, [data.gpu.power_watts, data.gpu.utilization_percent]);
+                updateChart(charts.emissions, timestamp, [data.carbon.emissions_total_g]);
+
+                // Track session data
+                if (currentSession) {
+                    currentSession.emissions.push(data.carbon.emissions_total_g);
+                    currentSession.power.push(data.gpu.power_watts);
+                    currentSession.duration = data.job.runtime_seconds;
+                }
+
+                // Check for high carbon alerts
+                checkCarbonAlerts(data.carbon.intensity_g_per_kwh);
+
+            } catch (error) {
+                console.error('Failed to fetch metrics:', error);
+            }
+        }
+
+        // CO2 Equivalents Calculations
+        function updateCO2Equivalents(totalGrams) {
+            // Convert to kg
+            const kg = totalGrams / 1000;
+
+            // Trees needed to absorb this CO2 in a year (1 tree absorbs ~21 kg/year)
+            const trees = (kg / 21).toFixed(2);
+
+            // Miles driven (average car emits 404g CO2/mile)
+            const miles = (totalGrams / 404).toFixed(2);
+
+            // LED bulb hours (10W LED = ~0.5g CO2/hour at avg grid intensity)
+            const ledHours = (totalGrams / 0.5).toFixed(0);
+
+            // Smartphone charges (15Wh per charge = ~7.5g CO2)
+            const phoneCharges = (totalGrams / 7.5).toFixed(0);
+
+            document.getElementById('treesNeeded').textContent = trees;
+            document.getElementById('drivingMiles').textContent = miles;
+            document.getElementById('lightbulbHours').textContent = ledHours;
+            document.getElementById('phoneCharges').textContent = phoneCharges;
+        }
+
+        // Job Control
+        async function startJob() {
+            try {
+                await fetch('/job/start', { method: 'POST' });
+                document.getElementById('startJobBtn').style.display = 'none';
+                document.getElementById('stopJobBtn').style.display = 'inline-block';
+                
+                // Start new session
+                currentSession = {
+                    startTime: Date.now(),
+                    duration: 0,
+                    emissions: [],
+                    power: [],
+                    region: selectedRegion
+                };
+                
+                showNotification('Job started successfully', 'success');
+            } catch (error) {
+                console.error('Failed to start job:', error);
+                showNotification('Failed to start job', 'error');
+            }
+        }
+
+        async function stopJob() {
+            try {
+                const response = await fetch('/job/stop', { method: 'POST' });
+                const data = await response.json();
+                
+                document.getElementById('startJobBtn').style.display = 'inline-block';
+                document.getElementById('stopJobBtn').style.display = 'none';
+                
+                // Save session
+                if (currentSession) {
+                    currentSession.endTime = Date.now();
+                    const avgEmissions = currentSession.emissions.reduce((a, b) => a + b, 0) / currentSession.emissions.length;
+                    const avgPower = currentSession.power.reduce((a, b) => a + b, 0) / currentSession.power.length;
+                    
+                    const sessionRecord = {
+                        date: new Date(currentSession.startTime).toLocaleString(),
+                        duration: currentSession.duration,
+                        totalEmissions: currentSession.emissions[currentSession.emissions.length - 1] || 0,
+                        avgPower: avgPower.toFixed(1),
+                        region: currentSession.region
+                    };
+                    
+                    saveSession(sessionRecord);
+                    currentSession = null;
+                }
+                
+                showNotification(`Job stopped. Runtime: ${formatTime(data.summary.runtime_hours * 3600)}`, 'success');
+            } catch (error) {
+                console.error('Failed to stop job:', error);
+                showNotification('Failed to stop job', 'error');
+            }
+        }
+
+        // Session History
+        function loadSessionHistory() {
+            const saved = localStorage.getItem('sessionHistory');
+            if (saved) {
+                sessionData = JSON.parse(saved);
+                renderSessionHistory();
+            }
+        }
+
+        function saveSession(session) {
+            sessionData.unshift(session);
+            if (sessionData.length > 50) {
+                sessionData = sessionData.slice(0, 50);
+            }
+            localStorage.setItem('sessionHistory', JSON.stringify(sessionData));
+            renderSessionHistory();
+        }
+
+        function renderSessionHistory() {
+            const container = document.getElementById('historyList');
+            if (sessionData.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 2rem;">No sessions yet. Start a job to begin tracking!</p>';
+                return;
+            }
+
+            container.innerHTML = sessionData.map((session, index) => `
+                <div class="history-item">
+                    <div class="history-header">
+                        <span class="history-date">🕒 ${session.date}</span>
+                        <span class="history-duration">${formatTime(session.duration)}</span>
+                    </div>
+                    <div class="history-stats">
+                        <span>⚡ ${session.avgPower} W avg</span>
+                        <span>🌿 ${session.totalEmissions.toFixed(2)} g CO₂</span>
+                        <span>🌍 ${session.region}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all session history?')) {
+                sessionData = [];
+                localStorage.removeItem('sessionHistory');
+                renderSessionHistory();
+                showNotification('History cleared', 'info');
+            }
+        }
+
+        // Export to CSV
+        async function exportToCSV() {
+            try {
+                const response = await fetch('/export/sessions');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ecocompute-sessions-${Date.now()}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showNotification('Data exported successfully', 'success');
+            } catch (error) {
+                // Fallback: export from local storage
+                exportLocalDataToCSV();
+            }
+        }
+
+        function exportLocalDataToCSV() {
+            if (sessionData.length === 0) {
+                showNotification('No data to export', 'warning');
+                return;
+            }
+
+            const headers = ['Date', 'Duration (s)', 'Avg Power (W)', 'Total Emissions (g CO2)', 'Region'];
+            const rows = sessionData.map(s => [
+                s.date,
+                s.duration,
+                s.avgPower,
+                s.totalEmissions.toFixed(2),
+                s.region
+            ]);
+
+            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ecocompute-sessions-${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            showNotification('Data exported successfully', 'success');
+        }
+
+        // Notifications & Alerts
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        function checkCarbonAlerts(intensity) {
+            const now = Date.now();
+            if (now - lastAlertTime < CONFIG.alertCooldown) return;
+
+            if (intensity > CONFIG.criticalCarbonThreshold) {
+                showNotification('⚠️ Critical carbon intensity detected!', 'danger');
+                playAlertSound();
+                sendBrowserNotification('Critical Carbon Alert', 'Carbon intensity is very high. Consider pausing non-urgent tasks.');
+                lastAlertTime = now;
+            } else if (intensity > CONFIG.highCarbonThreshold) {
+                showNotification('⚠️ High carbon intensity detected', 'warning');
+                lastAlertTime = now;
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+                <div>${message}</div>
+            `;
+            container.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        function sendBrowserNotification(title, body) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body,
+                    icon: '🌱',
+                    badge: '🌱'
+                });
+            }
+        }
+
+        function playAlertSound() {
+            if (!CONFIG.soundEnabled) return;
+            
+            // Create a simple beep using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Utility Functions
+        function formatTime(seconds) {
+            if (seconds < 60) return seconds.toFixed(0) + 's';
+            if (seconds < 3600) return (seconds / 60).toFixed(1) + 'm';
+            return (seconds / 3600).toFixed(2) + 'h';
+        }
+    </script>
+</body>
+</html>
