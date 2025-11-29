@@ -50,33 +50,20 @@ A comprehensive web application that monitors GPU power usage, calculates carbon
 
 ## 🚀 Quick Start
 
-### Option 1: Easy Launch (Windows)
-Double-click `start.ps1` - it will automatically check dependencies and start the server!
-
-### Option 2: Interactive Setup
-```bash
-python run.py
-```
-This script will check your environment, install dependencies if needed, and launch the server.
-
-### Option 3: Manual Setup
-
-#### 1. Install Dependencies
+### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 2. Run the Application
+### 2. Run the Application
 ```bash
 python app.py
 ```
 
-#### 3. Open Dashboard
+### 3. Open Dashboard
 Navigate to: **http://localhost:5000**
 
 The dashboard will automatically start monitoring and displaying real-time metrics!
-
-> 💡 **First time?** Check out [QUICKSTART.md](QUICKSTART.md) for a detailed walkthrough!
 
 ## 🔧 Configuration
 
